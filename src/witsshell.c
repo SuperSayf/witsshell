@@ -70,14 +70,19 @@ void redirectOutput(const char *outputFile)
 		displayError("An error has occurred\n");
 		exit(1);
 	}
+
+	// Redirect only the standard output (STDOUT) to the specified file
 	dup2(fd, STDOUT_FILENO);
-	dup2(fd, STDERR_FILENO);
+
+	// Close the file descriptor, as we no longer need it after redirection
 	close(fd);
 }
 
 // Function to execute a command
 void executeCommand(char *args[], bool parallel, const char *outputFile)
 {
+	int originalStdout = dup(STDOUT_FILENO); // Save the original STDOUT
+
 	if (outputFile)
 	{
 		// Redirect output to the specified file
@@ -110,6 +115,10 @@ void executeCommand(char *args[], bool parallel, const char *outputFile)
 		int status;
 		waitpid(childPid, &status, 0);
 	}
+
+	// Restore the original STDOUT and close the duplicated file descriptor
+	dup2(originalStdout, STDOUT_FILENO);
+	close(originalStdout);
 }
 
 int main(int argc, char *argv[])
