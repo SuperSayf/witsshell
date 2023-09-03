@@ -234,6 +234,14 @@ int main(int argc, char *argv[])
 					break;
 				}
 
+				if (outputDetected)
+				{
+					// If an output file has been detected, this argument is an additional output file
+					displayError("An error has occurred\n");
+					shouldRun = false;
+					break;
+				}
+
 				commandArgs[commandArgCount] = args[i];
 				commandArgCount++;
 			}
