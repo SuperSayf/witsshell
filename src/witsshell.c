@@ -45,7 +45,8 @@ void setPath(char *args[])
 {
 	if (args[1] == NULL)
 	{
-		displayError("An error has occurred\n");
+		// Empty path
+		strcpy(searchPath, "");
 	}
 	else
 	{
@@ -77,6 +78,12 @@ void redirectOutput(const char *outputFile)
 // Function to execute a command
 void executeCommand(char *args[], bool parallel, const char *outputFile)
 {
+	if (outputFile)
+	{
+		// Redirect output to the specified file
+		redirectOutput(outputFile);
+	}
+
 	pid_t childPid = fork();
 	if (childPid == -1)
 	{
@@ -91,15 +98,10 @@ void executeCommand(char *args[], bool parallel, const char *outputFile)
 			setpgid(0, 0); // Set new process group for parallel execution
 		}
 
-		if (outputFile)
-		{
-			redirectOutput(outputFile);
-		}
-
 		char fullPath[MAX_PATH_LENGTH + strlen(args[0]) + 2];
 		snprintf(fullPath, sizeof(fullPath), "%s/%s", searchPath, args[0]);
 		execv(fullPath, args);
-		perror("execv");
+		displayError("An error has occurred\n");
 		exit(1);
 	}
 	else if (!parallel)
