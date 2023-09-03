@@ -121,6 +121,33 @@ void executeCommand(char *args[], bool parallel, const char *outputFile)
 	close(originalStdout);
 }
 
+// Function to ensure ">" operator is surrounded by spaces
+void ensureSpacesAroundGreaterThan(char *input)
+{
+	// Iterate through the input string
+	for (int i = 0; input[i] != '\0'; i++)
+	{
+		if (input[i] == '>')
+		{
+			// Check if the previous character is not a space
+			if (i > 0 && input[i - 1] != ' ')
+			{
+				// Insert a space before the operator
+				memmove(input + i + 1, input + i, strlen(input + i) + 1);
+				input[i] = ' ';
+			}
+
+			// Check if the next character is not a space
+			if (input[i + 1] != ' ')
+			{
+				// Insert a space after the operator
+				memmove(input + i + 2, input + i + 1, strlen(input + i + 1) + 1);
+				input[i + 1] = ' ';
+			}
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	bool batchMode = false;
@@ -163,6 +190,9 @@ int main(int argc, char *argv[])
 		}
 
 		input[strlen(input) - 1] = '\0'; // Remove trailing newline
+
+		// Ensure ">" operator is surrounded by spaces
+		ensureSpacesAroundGreaterThan(input);
 
 		int argCount = 0;
 		args[argCount] = strtok(input, " ");
