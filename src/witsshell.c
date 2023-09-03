@@ -35,7 +35,7 @@ void executeCD(char *args[])
 	{
 		if (chdir(args[1]) != 0)
 		{
-			perror("cd");
+			displayError("An error has occurred\n");
 		}
 	}
 }
@@ -67,7 +67,7 @@ void redirectOutput(const char *outputFile)
 	int fd = open(outputFile, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 	if (fd == -1)
 	{
-		perror("open");
+		displayError("An error has occurred\n");
 		exit(1);
 	}
 	dup2(fd, STDOUT_FILENO);
@@ -87,7 +87,7 @@ void executeCommand(char *args[], bool parallel, const char *outputFile)
 	pid_t childPid = fork();
 	if (childPid == -1)
 	{
-		perror("fork");
+		displayError("An error has occurred\n");
 		exit(1);
 	}
 	else if (childPid == 0)
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 		inputStream = fopen(argv[1], "r");
 		if (!inputStream)
 		{
-			perror("fopen");
+			displayError("An error has occurred\n");
 			exit(1);
 		}
 	}
@@ -198,21 +198,40 @@ int main(int argc, char *argv[])
 			int commandArgCount = 0;
 			bool parallel = false;
 			const char *outputFile = NULL;
+			bool shouldRun = true;
+			bool outputDetected = false; // Track if an output file has been detected
 
 			for (int i = 0; i < argCount; i++)
 			{
 				if (strcmp(args[i], ">") == 0)
 				{
-					if (i + 1 < argCount)
+					if (i == 0 || i == argCount - 1)
 					{
-						outputFile = args[i + 1]; // Store the output file
+						displayError("An error has occurred\n");
+						shouldRun = false;
 						break;
 					}
 					else
 					{
-						displayError("An error has occurred\n");
+						if (outputDetected)
+						{
+							displayError("An error has occurred\n");
+							shouldRun = false;
+							break;
+						}
+						outputFile = args[i + 1]; // Store the output file
+						outputDetected = true;
+						i++; // Skip the next argument (the output file)
 						continue;
 					}
+				}
+
+				// Check if the argument contains ">" without being an output file
+				if (strstr(args[i], ">") != NULL)
+				{
+					displayError("An error has occurred\n");
+					shouldRun = false;
+					break;
 				}
 
 				commandArgs[commandArgCount] = args[i];
@@ -221,7 +240,10 @@ int main(int argc, char *argv[])
 
 			commandArgs[commandArgCount] = NULL; // Null-terminate the command argument list
 
-			executeCommand(commandArgs, parallel, outputFile);
+			if (shouldRun)
+			{
+				executeCommand(commandArgs, parallel, outputFile);
+			}
 		}
 	}
 
