@@ -1,1 +1,1 @@
-An error has occurred
+tester/run-tests.sh: line 29:  5213 Segmentation fault: 11  ./witsshell tests/19.in

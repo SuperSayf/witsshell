@@ -1,6 +1,8 @@
+Dockerfile
 Makefile
 README.md
 Shell Project.pdf
+docker-compose.yml
 run.sh
 src
 test.sh

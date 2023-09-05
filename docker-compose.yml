@@ -1,0 +1,9 @@
+version: '3'
+services:
+  my-bash-script:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: witsshell
+    volumes:
+      - ./src/witsshell.c:/app/src/witsshell.c
