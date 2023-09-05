@@ -2,6 +2,7 @@ Dockerfile
 Makefile
 README.md
 Shell Project.pdf
+daggyKakaCode.c
 docker-compose.yml
 run.sh
 src
