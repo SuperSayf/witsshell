@@ -180,60 +180,6 @@ void executeCommand(char *args[], const char *outputFile)
     close(originalStdout);
 }
 
-// Function to execute commands in parallel
-void executeCommandsInParallel(char *parallelCommands[], char *args[], const char *outputFile)
-{
-    // Array to hold child process IDs
-    pid_t childPids[MAX_ARGUMENTS];
-
-    // Initialize an index for child processes
-    int childCount = 0;
-
-    // Iterate through parallel commands
-    for (int i = 0; parallelCommands[i] != NULL; i++)
-    {
-        int argCount = 0;
-        args[argCount] = strtok(parallelCommands[i], " ");
-        while (args[argCount] != NULL)
-        {
-            argCount++;
-            args[argCount] = strtok(NULL, " ");
-        }
-        args[argCount] = NULL; // Null-terminate the argument list
-
-        // Create a child process
-        pid_t childPid = fork();
-        if (childPid == -1)
-        {
-            displayError("An error has occurred\n");
-            exit(1);
-        }
-        else if (childPid == 0)
-        {
-            // Child process
-            executeCommand(args, outputFile);
-            exit(0);
-        }
-        else
-        {
-            // Parent process
-            childPids[childCount++] = childPid;
-        }
-    }
-
-    // Wait for all child processes to complete
-    for (int i = 0; i < childCount; i++)
-    {
-        int status;
-        waitpid(childPids[i], &status, 0);
-    }
-}
-
-#include <stdbool.h>
-
-// Define a constant for the maximum number of arguments
-#define MAX_ARGUMENTS 100
-
 // Function to parse command arguments and handle output redirection
 void parseCommandArgs(char *args[], int argCount, char *commandArgs[], int *commandArgCount, const char **outputFile, bool *shouldRun)
 {
@@ -288,6 +234,63 @@ void parseCommandArgs(char *args[], int argCount, char *commandArgs[], int *comm
     commandArgs[*commandArgCount] = NULL; // Null-terminate the command argument list
 }
 
+void executeCommandsInParallel(char *parallelCommands[])
+{
+    // Declare a variable to store the status of child processes
+    int status;
+
+    // Iterate through parallel commands
+    for (int i = 0; parallelCommands[i] != NULL; i++)
+    {
+
+        // Print the parallel command
+        // printf("%s\n", parallelCommands[i]);
+
+        // Create a child process
+        pid_t childPid = fork();
+        if (childPid == -1)
+        {
+            displayError("An error has occurred\n");
+            exit(1);
+        }
+        else if (childPid == 0)
+        {
+            // Child process
+            char *args[MAX_ARGUMENTS];
+            int argCount = 0;
+            args[argCount] = strtok(parallelCommands[i], " ");
+            while (args[argCount] != NULL)
+            {
+                argCount++;
+                args[argCount] = strtok(NULL, " ");
+            }
+            args[argCount] = NULL; // Null-terminate the argument list
+
+            // Variables to pass to parseCommandArgs
+            char *commandArgs[MAX_ARGUMENTS];
+            int commandArgCount = 0;
+            const char *outputFile = NULL;
+            bool shouldRun = true;
+
+            parseCommandArgs(args, argCount, commandArgs, &commandArgCount, &outputFile, &shouldRun);
+
+            if (shouldRun)
+            {
+                // Execute the command with the parsed arguments and output file
+                executeCommand(commandArgs, outputFile);
+            }
+
+            exit(0);
+        }
+    }
+
+    // Wait for all child processes to complete and collect their status
+    for (int i = 0; parallelCommands[i] != NULL; i++)
+    {
+        wait(&status); // Collect the exit status of each child process
+    }
+}
+
 int main(int argc, char *argv[])
 {
     bool batchMode = false;
@@ -340,8 +343,12 @@ int main(int argc, char *argv[])
         int parallelCommandCount = 0;
         if (strstr(input, "&") != NULL)
         {
-            // Split the input into parallel commands
-            parallelCommands[0] = strtok(input, "&");
+            // Duplicate the input string before splitting into parallel commands
+            char inputCopy[MAX_INPUT_LENGTH];
+            strcpy(inputCopy, input);
+
+            // Split the input copy into parallel commands
+            parallelCommands[0] = strtok(inputCopy, "&");
             while (parallelCommands[parallelCommandCount] != NULL)
             {
                 parallelCommandCount++;
@@ -349,6 +356,15 @@ int main(int argc, char *argv[])
             }
 
             parallel = true;
+        }
+
+        // Remove spaces from the beginning of each parallel command
+        for (int i = 0; i < parallelCommandCount; i++)
+        {
+            while (parallelCommands[i][0] == ' ')
+            {
+                memmove(parallelCommands[i], parallelCommands[i] + 1, strlen(parallelCommands[i]));
+            }
         }
 
         int argCount = 0;
@@ -390,21 +406,29 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            char *commandArgs[MAX_ARGUMENTS];
-            int commandArgCount = 0;
-            const char *outputFile = NULL;
-            bool shouldRun = true;
-
-            parseCommandArgs(args, argCount, commandArgs, &commandArgCount, &outputFile, &shouldRun);
-
-            if (shouldRun && !parallel)
+            if (!parallel)
             {
-                executeCommand(commandArgs, outputFile);
+                // First parse the command arguments
+                char *commandArgs[MAX_ARGUMENTS];
+                int commandArgCount = 0;
+                const char *outputFile = NULL;
+                bool shouldRun = true;
+
+                parseCommandArgs(args, argCount, commandArgs, &commandArgCount, &outputFile, &shouldRun);
+
+                if (shouldRun)
+                {
+                    executeCommand(commandArgs, outputFile);
+                }
             }
-            else if (shouldRun && parallel)
+            else if (parallel)
             {
-                // Execute the parallel commands
-                executeCommandsInParallel(parallelCommands, commandArgs, outputFile);
+                // Print the parallel command
+                // for (int i = 0; i < parallelCommandCount; i++)
+                // {
+                //     printf("%s\n", parallelCommands[i]);
+                // }
+                executeCommandsInParallel(parallelCommands);
             }
         }
     }
