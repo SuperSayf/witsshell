@@ -229,6 +229,65 @@ void executeCommandsInParallel(char *parallelCommands[], char *args[], const cha
     }
 }
 
+#include <stdbool.h>
+
+// Define a constant for the maximum number of arguments
+#define MAX_ARGUMENTS 100
+
+// Function to parse command arguments and handle output redirection
+void parseCommandArgs(char *args[], int argCount, char *commandArgs[], int *commandArgCount, const char **outputFile, bool *shouldRun)
+{
+    bool outputDetected = false; // Track if an output file has been detected
+
+    for (int i = 0; i < argCount; i++)
+    {
+        // Check for output redirection
+        if (strcmp(args[i], ">") == 0)
+        {
+            if (i == 0 || i == argCount - 1)
+            {
+                displayError("An error has occurred\n");
+                *shouldRun = false;
+                break;
+            }
+            else
+            {
+                if (outputDetected)
+                {
+                    displayError("An error has occurred\n");
+                    *shouldRun = false;
+                    break;
+                }
+                *outputFile = args[i + 1]; // Store the output file
+                outputDetected = true;
+                i++; // Skip the next argument (the output file)
+                continue;
+            }
+        }
+
+        // Check if the argument contains ">" without being an output file
+        if (strstr(args[i], ">") != NULL)
+        {
+            displayError("An error has occurred\n");
+            *shouldRun = false;
+            break;
+        }
+
+        if (outputDetected)
+        {
+            // If an output file has been detected, this argument is an additional output file
+            displayError("An error has occurred\n");
+            *shouldRun = false;
+            break;
+        }
+
+        commandArgs[*commandArgCount] = args[i];
+        (*commandArgCount)++;
+    }
+
+    commandArgs[*commandArgCount] = NULL; // Null-terminate the command argument list
+}
+
 int main(int argc, char *argv[])
 {
     bool batchMode = false;
@@ -335,55 +394,8 @@ int main(int argc, char *argv[])
             int commandArgCount = 0;
             const char *outputFile = NULL;
             bool shouldRun = true;
-            bool outputDetected = false; // Track if an output file has been detected
 
-            for (int i = 0; i < argCount; i++)
-            {
-                // Check for output redirection
-                if (strcmp(args[i], ">") == 0)
-                {
-                    if (i == 0 || i == argCount - 1)
-                    {
-                        displayError("An error has occurred\n");
-                        shouldRun = false;
-                        break;
-                    }
-                    else
-                    {
-                        if (outputDetected)
-                        {
-                            displayError("An error has occurred\n");
-                            shouldRun = false;
-                            break;
-                        }
-                        outputFile = args[i + 1]; // Store the output file
-                        outputDetected = true;
-                        i++; // Skip the next argument (the output file)
-                        continue;
-                    }
-                }
-
-                // Check if the argument contains ">" without being an output file
-                if (strstr(args[i], ">") != NULL)
-                {
-                    displayError("An error has occurred\n");
-                    shouldRun = false;
-                    break;
-                }
-
-                if (outputDetected)
-                {
-                    // If an output file has been detected, this argument is an additional output file
-                    displayError("An error has occurred\n");
-                    shouldRun = false;
-                    break;
-                }
-
-                commandArgs[commandArgCount] = args[i];
-                commandArgCount++;
-            }
-
-            commandArgs[commandArgCount] = NULL; // Null-terminate the command argument list
+            parseCommandArgs(args, argCount, commandArgs, &commandArgCount, &outputFile, &shouldRun);
 
             if (shouldRun && !parallel)
             {
