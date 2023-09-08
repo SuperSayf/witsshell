@@ -279,6 +279,10 @@ void executeCommandsInParallel(char *parallelCommands[])
                 // Execute the command with the parsed arguments and output file
                 executeCommand(commandArgs, outputFile);
             }
+            else
+            {
+                displayError("An error has occurred\n");
+            }
 
             exit(0);
         }
